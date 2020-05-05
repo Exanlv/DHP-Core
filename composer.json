@@ -3,7 +3,7 @@
     "description": "Gateway wrapper for discord",
     "version": "0.1",
     "require": {
-        "php": "^7.4",
+        "php": "7.4.*",
         "textalk/websocket": "^1.2"
     },
     "license": "GPL-3.0"
