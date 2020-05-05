@@ -1,5 +1,8 @@
 {
+    "name": "exan/dhp-core",
+    "description": "Gateway wrapper for discord",
     "require": {
+        "php": "7.4",
         "textalk/websocket": "^1.2"
     }
 }
