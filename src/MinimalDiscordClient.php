@@ -1,0 +1,341 @@
+<?php
+namespace DHP;
+
+require(__DIR__ . '/../vendor/autoload.php');
+
+foreach (glob(__DIR__ . '/errors/*.php') as $filename)
+{
+    require $filename;
+}
+
+use DHP\Errors\DiscordAPIError;
+use DHP\Errors\UnexpectedAPIBehaviour;
+use WebSocket\Client as WebSocketClient;
+
+class MinimalDiscordClient
+{
+    /**
+     * @var string
+     */
+    private $websocket_url = 'wss://gateway.discord.gg/?v=6&encoding=json';
+    
+    /**
+     * @var WebsocketClient
+     */
+    private $websocket_client;
+
+    /**
+     * @var int
+     */
+    private $heartbeat_interval;
+
+    /**
+     * @var int
+     */
+    private $last_heartbeat_sent_at;
+
+    /**
+     * @var int
+     */
+    private $last_heartbeat_received_at;
+
+    /**
+     * @var string
+     */
+    private $session_id;
+
+    /**
+     * @var string
+     */
+    private $token;
+
+    /**
+     * @var string
+     */
+    private $sequence;
+
+    /**
+     * @var array
+     */
+    private $event_listeners = [];
+
+    public function __construct($token)
+    {
+        $this->websocket_client = new WebSocketClient($this->websocket_url);
+
+        $this->sequence = null;
+
+        $this->init(json_decode($this->websocket_client->receive()));
+
+        $this->token = $token;
+
+        $this->authorize();
+    }
+
+    public function start_handling()
+    {
+        $this->catch_webhooks();
+    }
+
+    /**
+     * @return void
+     */
+    private function init(\stdClass $data)
+    {
+        /*
+            Example $data value (json decoded to stdClass)
+
+            {
+                "op": 10,
+                "d": {
+                    "heartbeat_interval": 45000
+                }
+            }
+        */
+        
+        if ($data->op !== 10)
+            throw new UnexpectedAPIBehaviour();
+
+        $this->heartbeat_interval = floor($data->d->heartbeat_interval / 1000);
+
+        $this->last_heartbeat_sent_at = time();
+        $this->last_heartbeat_received_at = time();
+    }
+
+    /**
+     * @return void
+     */
+    private function authorize()
+    {
+        /*
+            Example of data to be sent
+            
+            {
+                "op": 2,
+                "d": {
+                    "token": "my_token",
+                    "properties": {
+                        "$os": "linux",
+                        "$browser": "my_library",
+                        "$device": "my_library"
+                    }
+                }
+            }
+        */
+
+        $this->websocket_client->send(json_encode([
+            'op' => 2,
+            'd' => [
+                'token' => $this->token,
+                'properties' => [
+                    '$os' => PHP_OS,
+                    '$browser' => 'DHP',
+                    '$device' => 'DHP'
+                ]
+            ]
+        ]));
+
+        $response = $this->websocket_client->receive();
+
+        $data = json_decode($response);
+
+        if ($data === null) {
+            throw new DiscordAPIError($response);
+        }
+
+        $this->handle_webhook($data);
+    }
+
+    /**
+     * Call this if youre done setting up the event handlers for the bot.
+     * This should be the last function you call in your init script as it is an infinite loop
+     * @return void
+     */
+    private function catch_webhooks()
+    {
+        while (true) {
+            $this->handle_heartbeat();
+
+            try {
+                $webhook = $this->websocket_client->receive();
+
+                $data = json_decode($webhook);
+
+                if ($data === null) {
+                    echo $webhook;
+                    
+                    continue;
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+
+            $this->handle_webhook($data);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    private function handle_webhook($data)
+    {
+        if (property_exists($data, 's'))
+            $this->sequence = $data->s;
+
+        switch ($data->op){
+            case 0:
+                $this->handle_event($data);
+                break;
+            case 9:
+                $this->reload_connection();
+                break;
+            case 11:
+                $this->handle_received_heartbeat();
+                break;
+            default:
+                echo 'Unhandled op code: ' . $data->op . "\n";
+        }
+    }
+
+    /**
+     * @return void
+     */
+    private function handle_event($data)
+    {
+        if (property_exists($data, 't')) {
+            if ($data->t === 'READY')
+                $this->handle_ready_event($data->d);
+
+            $this->emit($data->t, $data->d);
+        } else {
+            var_dump($data);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    private function send_heartbeat()
+    {
+        $this->heartbeat_d = $this->heartbeat_d === null ? null : $this->heartbeat_d + 1;
+
+        $this->websocket_client->send(json_encode([
+            'op' => 1,
+            'd' => $this->sequence,
+        ]));
+
+        $this->last_heartbeat_sent_at = time();
+    }
+
+    /**
+     * @return void
+     */
+    private function handle_heartbeat()
+    {
+        if ($this->last_heartbeat_sent_at + $this->heartbeat_interval <= time())
+            if ($this->last_heartbeat_sent_at > $this->last_heartbeat_received_at)
+                $this->reload_connection();
+            else
+                $this->send_heartbeat();
+    }
+
+    /**
+     * @return void
+     */
+    public function on($event, $function)
+    {
+        if (!isset($this->event_listeners[$event]))
+            $this->event_listeners[$event] = [];
+
+        $this->event_listeners[$event][] = $function;
+    }
+
+    /**
+     * @return void
+     */
+    private function emit($event, $data = null)
+    {
+        if (isset($this->event_listeners[$event]))
+            foreach ($this->event_listeners[$event] as $event_listener)
+                $event_listener($data);
+    }
+
+    /**
+     * @return void
+     */
+    private function handle_received_heartbeat()
+    {
+        $this->last_heartbeat_received_at = time();
+    }
+
+    /**
+     * @return void
+     */
+    private function handle_ready_event($data)
+    {
+        if (property_exists($data, 'session_id'))
+            $this->session_id = $data->session_id;
+    }
+
+    /**
+     * @return void
+     */
+    public function reload_connection()
+    {
+        $this->websocket_client->close(4000);
+
+        $this->websocket_client = new WebSocketClient($this->websocket_url);
+
+        $this->init(json_decode($this->websocket_client->receive()));
+
+        $this->resume();
+    }
+
+    /**
+     * @return void
+     */
+    private function resume()
+    {
+        /*
+            Example of data to be sent
+
+            {
+                "op": 6,
+                "d": {
+                    "token": "my_token",
+                    "session_id": "session_id_i_stored",
+                    "seq": 1337
+                }
+            }
+        */
+
+        $this->websocket_client->send(json_encode([
+            'op' => 6,
+            'd' => [
+                'token' => $this->token,
+                'session_id' => $this->session_id,
+                'seq' => $this->sequence
+            ]
+        ]));
+
+        $res = $this->websocket_client->receive();
+
+        $data = json_decode($res);
+
+        if ($data === null || !property_exists($data, 'op') || $data->op !== 6) {
+            $this->reconnect();
+        }
+
+        $this->last_heartbeat_sent_at = time();
+        $this->last_heartbeat_received_at = time();
+        $this->handle_webhook($data);
+    }
+
+    /**
+     * @return void
+     */
+    private function reconnect()
+    {
+        $this->__construct($this->token);
+    }
+}
