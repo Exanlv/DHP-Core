@@ -1,5 +1,5 @@
 <?php
-require(__DIR__ . '/MinimalDiscordClient.php');
+require(__DIR__ . '/../vendor/autoload.php');
 
 use DHP\MinimalDiscordClient;
 

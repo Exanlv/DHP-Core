@@ -1,13 +1,6 @@
 <?php
 namespace DHP;
 
-require(__DIR__ . '/../vendor/autoload.php');
-
-foreach (glob(__DIR__ . '/errors/*.php') as $filename)
-{
-    require $filename;
-}
-
 use DHP\Errors\DiscordAPIError;
 use DHP\Errors\UnexpectedAPIBehaviour;
 use WebSocket\Client as WebSocketClient;
