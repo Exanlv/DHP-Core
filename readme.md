@@ -4,7 +4,7 @@ Webhook handler for discord gateway
 DHP-Core is the core for a more user friendly library. This is simply a wrapper around the gateway.
 
 ```
-use DHP\MinimalDiscordClient;
+use DHPCore\MinimalDiscordClient;
 
 $client = new MinimalDiscordClient(trim(file_get_contents(__DIR__ . '/../.token')));
 
