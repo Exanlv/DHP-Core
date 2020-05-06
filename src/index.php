@@ -1,7 +1,7 @@
 <?php
 require(__DIR__ . '/../vendor/autoload.php');
 
-use DHP\MinimalDiscordClient;
+use DHPCore\MinimalDiscordClient;
 
 $client = new MinimalDiscordClient(trim(file_get_contents(__DIR__ . '/../.token')));
 

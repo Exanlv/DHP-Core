@@ -1,8 +1,8 @@
 <?php
-namespace DHP;
+namespace DHPCore;
 
-use DHP\Errors\DiscordAPIError;
-use DHP\Errors\UnexpectedAPIBehaviour;
+use DHPCore\Errors\DiscordAPIError;
+use DHPCore\Errors\UnexpectedAPIBehaviour;
 use WebSocket\Client as WebSocketClient;
 
 class MinimalDiscordClient

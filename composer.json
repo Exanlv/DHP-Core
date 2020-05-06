@@ -9,7 +9,7 @@
     "license": "GPL-3.0",
     "autoload": {
         "psr-4": {
-            "DHP\\": "src"
+            "DHPCore\\": "src"
         }
     }
 }
