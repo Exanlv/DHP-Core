@@ -65,9 +65,16 @@ class MinimalDiscordClient
         $this->authorize();
     }
 
+    /**
+     * Call this if youre done setting up the event handlers for the bot.
+     * This should be the last function you call in your init script as it is an infinite loop
+     * @return void
+     */
     public function start_handling()
     {
-        $this->catch_webhooks();
+        while (true) {
+            $this->tick();
+        }
     }
 
     /**
@@ -140,31 +147,27 @@ class MinimalDiscordClient
     }
 
     /**
-     * Call this if youre done setting up the event handlers for the bot.
-     * This should be the last function you call in your init script as it is an infinite loop
      * @return void
      */
-    private function catch_webhooks()
+    public function tick()
     {
-        while (true) {
-            $this->handle_heartbeat();
+        $this->handle_heartbeat();
 
-            try {
-                $webhook = $this->websocket_client->receive();
+        try {
+            $webhook = $this->websocket_client->receive();
 
-                $data = json_decode($webhook);
+            $data = json_decode($webhook);
 
-                if ($data === null) {
-                    echo $webhook;
-                    
-                    continue;
-                }
-            } catch (\Exception $e) {
-                continue;
+            if ($data === null) {
+                echo $webhook;
+                
+                return;
             }
-
-            $this->handle_webhook($data);
+        } catch (\Exception $e) {
+            return;
         }
+
+        $this->handle_webhook($data);
     }
 
     /**
@@ -210,8 +213,6 @@ class MinimalDiscordClient
      */
     private function send_heartbeat()
     {
-        $this->heartbeat_d = $this->heartbeat_d === null ? null : $this->heartbeat_d + 1;
-
         $this->websocket_client->send(json_encode([
             'op' => 1,
             'd' => $this->sequence,
@@ -246,11 +247,11 @@ class MinimalDiscordClient
     /**
      * @return void
      */
-    private function emit($event, $data = null)
+    private function emit($event, ...$data)
     {
         if (isset($this->event_listeners[$event]))
             foreach ($this->event_listeners[$event] as $event_listener)
-                $event_listener($data);
+                $event_listener(...$data);
     }
 
     /**
@@ -275,13 +276,17 @@ class MinimalDiscordClient
      */
     public function reload_connection()
     {
-        $this->websocket_client->close(4000);
+        try {
+            $this->websocket_client->close(4000);
 
-        $this->websocket_client = new WebSocketClient($this->websocket_url);
-
-        $this->init(json_decode($this->websocket_client->receive()));
-
-        $this->resume();
+            $this->websocket_client = new WebSocketClient($this->websocket_url);
+    
+            $this->init(json_decode($this->websocket_client->receive()));
+    
+            $this->resume();
+        } catch (\Exception $e) {
+            $this->reconnect();
+        }
     }
 
     /**
