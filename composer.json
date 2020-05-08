@@ -4,7 +4,8 @@
     "description": "Gateway wrapper for discord",
     "require": {
         "php": "7.4.*",
-        "textalk/websocket": "^1.2"
+        "textalk/websocket": "^1.2",
+        "exan/event_emitter": "^1.0"
     },
     "license": "GPL-3.0",
     "autoload": {

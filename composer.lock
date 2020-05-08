@@ -4,8 +4,35 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "72f204933136b20aab9b7cdf28fe0d5d",
+    "content-hash": "92cbb8c7adcd6c326f68bf792514857c",
     "packages": [
+        {
+            "name": "exan/event_emitter",
+            "version": "1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Exanlv/EventEmitter.git",
+                "reference": "550c7e3ad133a51cfb6e390c4a0ca327f8b1e65f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Exanlv/EventEmitter/zipball/550c7e3ad133a51cfb6e390c4a0ca327f8b1e65f",
+                "reference": "550c7e3ad133a51cfb6e390c4a0ca327f8b1e65f",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "EventEmitter\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-3.0"
+            ],
+            "description": "A simple event emitter for PHP",
+            "time": "2020-05-07T16:13:40+00:00"
+        },
         {
             "name": "textalk/websocket",
             "version": "1.2.0",
@@ -52,7 +79,9 @@
     "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": [],
+    "platform": {
+        "php": "7.4.*"
+    },
     "platform-dev": [],
     "plugin-api-version": "1.1.0"
 }

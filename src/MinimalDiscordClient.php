@@ -3,9 +3,10 @@ namespace DHPCore;
 
 use DHPCore\Errors\DiscordAPIError;
 use DHPCore\Errors\UnexpectedAPIBehaviour;
+use EventEmitter\EventEmitter;
 use WebSocket\Client as WebSocketClient;
 
-class MinimalDiscordClient
+class MinimalDiscordClient extends EventEmitter
 {
     /**
      * @var string
@@ -47,11 +48,6 @@ class MinimalDiscordClient
      */
     private $sequence;
 
-    /**
-     * @var array
-     */
-    private $event_listeners = [];
-
     public function __construct($token)
     {
         $this->websocket_client = new WebSocketClient($this->websocket_url);
@@ -74,6 +70,7 @@ class MinimalDiscordClient
     {
         while (true) {
             $this->tick();
+            $this->emit('TICK');
         }
     }
 
@@ -167,7 +164,7 @@ class MinimalDiscordClient
             return;
         }
 
-        $this->handle_webhook($data);
+        $this->handle_webhook($data);    
     }
 
     /**
@@ -219,6 +216,8 @@ class MinimalDiscordClient
         ]));
 
         $this->last_heartbeat_sent_at = time();
+        
+        $this->emit('HEARTBEAT');
     }
 
     /**
@@ -231,27 +230,6 @@ class MinimalDiscordClient
                 $this->reload_connection();
             else
                 $this->send_heartbeat();
-    }
-
-    /**
-     * @return void
-     */
-    public function on($event, $function)
-    {
-        if (!isset($this->event_listeners[$event]))
-            $this->event_listeners[$event] = [];
-
-        $this->event_listeners[$event][] = $function;
-    }
-
-    /**
-     * @return void
-     */
-    private function emit($event, ...$data)
-    {
-        if (isset($this->event_listeners[$event]))
-            foreach ($this->event_listeners[$event] as $event_listener)
-                $event_listener(...$data);
     }
 
     /**
