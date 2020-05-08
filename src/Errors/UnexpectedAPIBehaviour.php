@@ -1,6 +1,6 @@
 <?php
 
-namespace DHP\Errors;
+namespace DHPCore\Errors;
 
 class UnexpectedAPIBehaviour extends \Error
 {
