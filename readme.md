@@ -22,4 +22,4 @@ $client->start_handling();
 ```
 Note: `$client->start_handling();` should be the absolute last thing you do as it will create an infinite loop in handling payloads/sending heartbeats/etc. Preventing anything else from happening.
 
-For the record, I am aware that using PHP for an application like this is not great.
+Not using reactPHP so performance will not be great.
